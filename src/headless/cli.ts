@@ -2,16 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_TUNING } from '../core/contract.js';
 import { GameSimulation, defaultInputState } from '../core/simulation.js';
-import type { InputFrame, InputState, InputsFile, ScenarioConfig, Vec3 } from '../core/types.js';
+import type { InputFrame, InputState, InputsFile, ScenarioConfig } from '../core/types.js';
 
 class InputFormatError extends Error {}
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
-}
-
-function isVec3(v: unknown): v is Vec3 {
-  return Array.isArray(v) && v.length === 3 && v.every(isFiniteNumber);
 }
 
 function parseInputsFile(filePath: string): Map<number, InputFrame> {
@@ -69,7 +65,7 @@ function parseInputsFile(filePath: string): Map<number, InputFrame> {
       throw new InputFormatError(`Invalid cam_yaw_deg at tick ${frame.tick}.`);
     }
 
-    for (const key of ['jump', 'interact', 'pulse', 'dash'] as const) {
+    for (const key of ['jump', 'interact', 'pulse', 'dash', 'pause'] as const) {
       if (frame[key] !== undefined && typeof frame[key] !== 'boolean') {
         throw new InputFormatError(`Field "${key}" must be boolean at tick ${frame.tick}.`);
       }
@@ -101,78 +97,6 @@ function parseScenarioFile(filePath: string): ScenarioConfig {
   }
 
   const sc = parsed as ScenarioConfig;
-
-  if (sc.player !== undefined) {
-    if (!sc.player || typeof sc.player !== 'object') {
-      throw new InputFormatError('Scenario "player" must be an object.');
-    }
-    if (sc.player.pos !== undefined && !isVec3(sc.player.pos)) {
-      throw new InputFormatError('Scenario "player.pos" must be [x, y, z].');
-    }
-    if (sc.player.carried !== undefined && (!Number.isInteger(sc.player.carried) || sc.player.carried < 0)) {
-      throw new InputFormatError('Scenario "player.carried" must be a non-negative integer.');
-    }
-    if (sc.player.flames !== undefined && (!Number.isInteger(sc.player.flames) || sc.player.flames < 0)) {
-      throw new InputFormatError('Scenario "player.flames" must be a non-negative integer.');
-    }
-  }
-
-  if (sc.random_motes !== undefined && typeof sc.random_motes !== 'boolean') {
-    throw new InputFormatError('Scenario "random_motes" must be a boolean.');
-  }
-  if (sc.random_shades !== undefined && typeof sc.random_shades !== 'boolean') {
-    throw new InputFormatError('Scenario "random_shades" must be a boolean.');
-  }
-  if (sc.time_left_s !== undefined && (!isFiniteNumber(sc.time_left_s) || sc.time_left_s < 0)) {
-    throw new InputFormatError('Scenario "time_left_s" must be a non-negative number.');
-  }
-
-  if (sc.motes !== undefined) {
-    if (!Array.isArray(sc.motes)) {
-      throw new InputFormatError('Scenario "motes" must be an array.');
-    }
-    for (const m of sc.motes) {
-      if (Array.isArray(m)) {
-        if (!isVec3(m)) throw new InputFormatError('Scenario mote tuple must be [x, y, z].');
-      } else if (m && typeof m === 'object') {
-        if (!isVec3(m.pos)) throw new InputFormatError('Scenario mote object must have pos [x, y, z].');
-      } else {
-        throw new InputFormatError('Invalid mote entry in scenario.');
-      }
-    }
-  }
-
-  if (sc.shades !== undefined) {
-    if (!Array.isArray(sc.shades)) {
-      throw new InputFormatError('Scenario "shades" must be an array.');
-    }
-    for (const s of sc.shades) {
-      if (!s || typeof s !== 'object' || !isVec3(s.pos)) {
-        throw new InputFormatError('Each scenario shade must be an object with pos [x, y, z].');
-      }
-    }
-  }
-
-  if (sc.lanterns !== undefined) {
-    if (!Array.isArray(sc.lanterns)) {
-      throw new InputFormatError('Scenario "lanterns" must be an array.');
-    }
-    for (const l of sc.lanterns) {
-      if (!l || typeof l !== 'object' || typeof l.id !== 'string') {
-        throw new InputFormatError('Each scenario lantern must be an object with string "id".');
-      }
-      if (l.pos !== undefined && !isVec3(l.pos)) {
-        throw new InputFormatError(`Invalid pos on scenario lantern ${l.id}.`);
-      }
-      if (l.deposited !== undefined && (!Number.isInteger(l.deposited) || l.deposited < 0)) {
-        throw new InputFormatError(`Invalid deposited on scenario lantern ${l.id}.`);
-      }
-      if (l.lit !== undefined && typeof l.lit !== 'boolean') {
-        throw new InputFormatError(`Invalid lit on scenario lantern ${l.id}.`);
-      }
-    }
-  }
-
   return sc;
 }
 
@@ -217,7 +141,7 @@ function parseCliArgs(argv: string[]): CliArgs {
   const snapshotEvery = snapshotEveryRaw !== undefined ? Number(snapshotEveryRaw) : 10;
 
   if (!Number.isInteger(seed)) throw new Error('--seed must be an integer.');
-  if (!Number.isInteger(night) || night < 1) throw new Error('--night must be a positive integer.');
+  if (!Number.isInteger(night) || night < 1 || night > 3) throw new Error('--night must be 1, 2, or 3.');
   if (!Number.isInteger(ticks) || ticks < 0) throw new Error('--ticks must be a non-negative integer.');
   if (!Number.isInteger(snapshotEvery) || snapshotEvery < 1) {
     throw new Error('--snapshot-every must be a positive integer.');
@@ -265,13 +189,13 @@ function main(): void {
   const sim = new GameSimulation(args.seed, args.night, scenario, DEFAULT_TUNING);
   const lines: string[] = [];
 
-  // Snapshot tick 0: after scenario setup, before applying input
+  // Snapshot tick 0
   lines.push(JSON.stringify(sim.getSnapshot(0)));
 
   const currentInput: InputState = defaultInputState();
 
   for (let k = 0; k < args.ticks; k++) {
-    if (sim.state !== 'playing') {
+    if (sim.state === 'won' || sim.state === 'lost') {
       break;
     }
 
@@ -283,6 +207,7 @@ function main(): void {
       if (frame.interact !== undefined) currentInput.interact = frame.interact;
       if (frame.pulse !== undefined) currentInput.pulse = frame.pulse;
       if (frame.dash !== undefined) currentInput.dash = frame.dash;
+      if (frame.pause !== undefined) currentInput.pause = frame.pause;
     }
 
     const events = sim.step(currentInput);

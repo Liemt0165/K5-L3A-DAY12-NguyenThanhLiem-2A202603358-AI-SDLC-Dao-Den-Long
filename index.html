@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Đảo Đèn Lồng — Đêm 1: Đảo Bến</title>
+    <title>Đảo Đèn Lồng — 3 Đêm Cổ Tích</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html, body {
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #0d0717;
+        background: #0e1430;
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        color: #fff6e5;
+        color: #f5f1e6;
         user-select: none;
       }
       #canvas-container {
@@ -31,8 +31,8 @@
         gap: 12px;
       }
       .hud-card {
-        background: rgba(18, 10, 32, 0.72);
-        border: 1px solid rgba(255, 190, 105, 0.32);
+        background: rgba(14, 20, 48, 0.78);
+        border: 1px solid rgba(242, 193, 78, 0.35);
         backdrop-filter: blur(8px);
         border-radius: 12px;
         padding: 12px 16px;
@@ -42,7 +42,7 @@
         font-size: 13px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: #ffbe6b;
+        color: #f2c14e;
         margin-bottom: 6px;
       }
       .hud-row {
@@ -54,20 +54,102 @@
       }
       .stat-val {
         font-weight: 700;
-        color: #ffd584;
+        color: #ffe58a;
       }
       .flames {
-        color: #ff9c42;
+        color: #ff5a5f;
         letter-spacing: 2px;
+        font-size: 18px;
       }
-      #prompt-banner {
+
+      /* Timer Warning */
+      #hud-time.warning {
+        color: #ff5a5f;
+        animation: blink 0.8s infinite;
+      }
+      @keyframes blink {
+        50% { opacity: 0.3; }
+      }
+
+      /* 10-Slot Mote Bar (Bottom Center) */
+      #mote-bar-container {
         position: fixed;
-        bottom: 92px;
+        bottom: 74px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(255, 178, 72, 0.22);
-        border: 1px solid rgba(255, 196, 107, 0.6);
-        color: #fff2d6;
+        display: flex;
+        gap: 6px;
+        background: rgba(14, 20, 48, 0.78);
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(242, 193, 78, 0.4);
+        pointer-events: none;
+      }
+      .mote-slot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255, 230, 138, 0.45);
+        background: rgba(0, 0, 0, 0.3);
+        transition: background 0.15s ease, transform 0.15s ease;
+      }
+      .mote-slot.filled {
+        background: #ffe58a;
+        box-shadow: 0 0 8px #ffe58a;
+        transform: scale(1.1);
+      }
+
+      /* Skills Cooldown UI (Bottom Right) */
+      #skills-panel {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        display: flex;
+        gap: 12px;
+        pointer-events: none;
+      }
+      .skill-box {
+        width: 58px;
+        height: 58px;
+        background: rgba(14, 20, 48, 0.85);
+        border: 1px solid rgba(242, 193, 78, 0.4);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .skill-key {
+        font-size: 10px;
+        color: #8fa3b8;
+      }
+      .skill-cd-mask {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #ff5a5f;
+        opacity: 0;
+      }
+      .skill-cd-mask.active {
+        opacity: 1;
+      }
+
+      /* Prompt Banner */
+      #prompt-banner {
+        position: fixed;
+        bottom: 118px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(242, 193, 78, 0.25);
+        border: 1px solid rgba(242, 193, 78, 0.8);
+        color: #fff6c2;
         padding: 8px 18px;
         border-radius: 999px;
         font-size: 14px;
@@ -79,20 +161,44 @@
       #prompt-banner.visible {
         opacity: 1;
       }
+
+      /* Direction arrow pointing to nearest unlit lantern */
+      #lantern-arrow {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        width: 32px;
+        height: 32px;
+        margin-top: -16px;
+        margin-left: -16px;
+        pointer-events: none;
+        display: none;
+        z-index: 5;
+        transform-origin: center center;
+      }
+      #lantern-arrow svg {
+        width: 100%;
+        height: 100%;
+        fill: #f2c14e;
+        filter: drop-shadow(0 0 6px #ffae42);
+      }
+
       #controls-hint {
         position: fixed;
         bottom: 16px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(18, 10, 32, 0.65);
+        background: rgba(14, 20, 48, 0.75);
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 10px;
         padding: 8px 14px;
         font-size: 12px;
-        color: #dfd2eb;
+        color: #8fa3b8;
         pointer-events: none;
         text-align: center;
       }
+
+      /* Modals (Overlay) */
       #overlay {
         position: fixed;
         inset: 0;
@@ -107,38 +213,48 @@
         display: flex;
       }
       .modal {
-        background: rgba(24, 14, 42, 0.95);
-        border: 1px solid rgba(255, 190, 105, 0.5);
+        background: rgba(14, 20, 48, 0.95);
+        border: 1px solid rgba(242, 193, 78, 0.6);
         border-radius: 18px;
         padding: 28px 34px;
         text-align: center;
-        max-width: 420px;
+        max-width: 440px;
         width: 90%;
         box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
       }
       .modal h1 {
         font-size: 28px;
         margin-bottom: 10px;
-        color: #ffd07b;
+        color: #f2c14e;
       }
       .modal p {
         font-size: 15px;
         line-height: 1.5;
-        color: #e7ddf2;
+        color: #f5f1e6;
         margin-bottom: 18px;
+      }
+      .modal-buttons {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
       }
       .btn {
         background: linear-gradient(135deg, #ffae42, #ff7e29);
         color: #1c0f08;
         font-weight: 700;
-        font-size: 15px;
+        font-size: 14px;
         border: none;
         border-radius: 10px;
-        padding: 10px 22px;
+        padding: 10px 18px;
         cursor: pointer;
       }
       .btn:hover {
-        filter: brightness(1.08);
+        filter: brightness(1.1);
+      }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.15);
+        color: #f5f1e6;
       }
     </style>
   </head>
@@ -147,14 +263,13 @@
 
     <div id="hud">
       <div class="hud-card">
-        <div class="hud-title">Đêm 1 · Đảo Bến</div>
+        <div id="night-name" class="hud-title">Đêm 1 · Đảo Bến</div>
         <div class="hud-row">
-          <span>Máu: <span id="hud-flames" class="flames"></span></span>
-          <span>Đom đóm: <span id="hud-carried" class="stat-val">0/6</span></span>
+          <span>Ngọn Lửa: <span id="hud-flames" class="flames"></span></span>
         </div>
         <div class="hud-row">
-          <span>Đèn đã thắp: <span id="hud-lanterns" class="stat-val">0/5</span></span>
-          <span>Tỏa sáng (Q): <span id="hud-pulse" class="stat-val">Sẵn sàng</span></span>
+          <span>Đèn Lớn: <span id="hud-lanterns" class="stat-val">0/5</span></span>
+          <span>Bùa Gió: <span id="hud-charm" class="stat-val">Không</span></span>
         </div>
       </div>
 
@@ -164,26 +279,92 @@
           <span>Thời gian: <span id="hud-time" class="stat-val">05:00</span></span>
         </div>
         <div class="hud-row" style="justify-content: flex-end;">
-          <span>Điểm: <span id="hud-score" class="stat-val">0</span></span>
+          <span>Điểm số: <span id="hud-score" class="stat-val">0</span></span>
         </div>
       </div>
     </div>
 
-    <div id="prompt-banner">Nhấn E để nạp ánh sáng vào Đèn Lồng</div>
+    <!-- 10 Slots Mote Bar -->
+    <div id="mote-bar-container">
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+      <div class="mote-slot"></div>
+    </div>
+
+    <!-- Skills Cooldown Indicator -->
+    <div id="skills-panel">
+      <div class="skill-box">
+        <span class="skill-key">Shift</span>
+        <span>Lướt</span>
+        <div id="dash-cd-mask" class="skill-cd-mask"></div>
+      </div>
+      <div class="skill-box">
+        <span class="skill-key">Q (x3)</span>
+        <span>Tỏa Sáng</span>
+        <div id="pulse-cd-mask" class="skill-cd-mask"></div>
+      </div>
+    </div>
+
+    <div id="prompt-banner">Nhấn E để nạp ánh sáng vào Đèn Lồng (x/10)</div>
+
+    <!-- Direction Arrow to nearest unlit lantern -->
+    <div id="lantern-arrow">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2L4 14h5v8h6v-8h5z" />
+      </svg>
+    </div>
 
     <div id="controls-hint">
       <b>WASD / Mũi tên</b>: Di chuyển &nbsp;·&nbsp;
       <b>Space</b>: Nhảy &nbsp;·&nbsp;
+      <b>Shift</b>: Lướt &nbsp;·&nbsp;
       <b>E / F</b>: Nạp đèn &nbsp;·&nbsp;
-      <b>Q / Shift</b>: Tỏa sáng (tốn 1 đom đóm) &nbsp;·&nbsp;
-      <b>Kéo chuột / J, L</b>: Xoay camera
+      <b>Q</b>: Tỏa sáng &nbsp;·&nbsp;
+      <b>Esc / P</b>: Tạm dừng
     </div>
 
     <div id="overlay">
       <div class="modal">
-        <h1 id="overlay-title">Chiến thắng!</h1>
+        <h1 id="overlay-title">Đảo Đèn Lồng</h1>
         <p id="overlay-desc"></p>
-        <button id="restart-btn" class="btn">Chơi lại</button>
+        <div class="modal-buttons">
+          <button id="resume-btn" class="btn" style="display: none;">Tiếp tục</button>
+          <button id="next-night-btn" class="btn" style="display: none;">Đêm tiếp theo</button>
+          <button id="restart-btn" class="btn">Chơi lại</button>
+          <button id="settings-btn" class="btn btn-secondary">Cài đặt</button>
+          <button id="select-night-btn" class="btn btn-secondary">Đổi Đêm (1/2/3)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-overlay" style="position: fixed; inset: 0; background: rgba(10, 5, 20, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 12;">
+      <div class="modal">
+        <h1>Cài Đặt</h1>
+        <div style="text-align: left; margin: 18px 0; display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <label style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px;">
+              <span>Âm lượng âm thanh:</span>
+              <span id="vol-val">50%</span>
+            </label>
+            <input type="range" id="vol-slider" min="0" max="100" value="50" style="width: 100%; accent-color: #f2c14e;" />
+          </div>
+          <div>
+            <label style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px;">
+              <span>Độ nhạy chuột:</span>
+              <span id="sens-val">1.0x</span>
+            </label>
+            <input type="range" id="sens-slider" min="2" max="30" value="10" style="width: 100%; accent-color: #f2c14e;" />
+          </div>
+        </div>
+        <button id="close-settings-btn" class="btn">Lưu & Đóng</button>
       </div>
     </div>
 
