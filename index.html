@@ -67,6 +67,9 @@
         color: #ff5a5f;
         animation: blink 0.8s infinite;
       }
+      body.colorblind #hud-time.warning {
+        color: #ffffff;
+      }
       @keyframes blink {
         50% { opacity: 0.3; }
       }
@@ -284,18 +287,10 @@
       </div>
     </div>
 
-    <!-- 10 Slots Mote Bar -->
-    <div id="mote-bar-container">
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
-      <div class="mote-slot"></div>
+    <!-- Mote Bar (Dynamic 10-20 Slots) -->
+    <div id="mote-bar-container" style="align-items: center;">
+      <span id="hud-carried-text" style="font-size: 13px; font-weight: 700; color: #ffe58a; margin-right: 6px;">0/10</span>
+      <div id="mote-slots-wrap" style="display: flex; gap: 5px;"></div>
     </div>
 
     <!-- Skills Cooldown Indicator -->
@@ -363,6 +358,10 @@
             </label>
             <input type="range" id="sens-slider" min="2" max="30" value="10" style="width: 100%; accent-color: #f2c14e;" />
           </div>
+          <label style="display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" id="colorblind-toggle" style="width: 16px; height: 16px; accent-color: #f2c14e;" />
+            <span>Bảng màu dễ phân biệt (Mù màu)</span>
+          </label>
         </div>
         <button id="close-settings-btn" class="btn">Lưu & Đóng</button>
       </div>

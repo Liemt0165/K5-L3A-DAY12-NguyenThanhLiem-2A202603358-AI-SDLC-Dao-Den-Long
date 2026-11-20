@@ -1,7 +1,7 @@
 export type Vec3 = [number, number, number];
 
 export type GamePhaseState = 'playing' | 'won' | 'lost' | 'paused';
-export type ShadeState = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+export type ShadeState = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned' | 'drain';
 export type DrifterState = 'idle' | 'chase' | 'flee' | 'removed';
 export type MoteKind = 'random' | 'dropped';
 
@@ -19,8 +19,16 @@ export interface TuningConfig {
   dash_duration_s: number;
   dash_cooldown_s: number;
   carry_capacity: number;
+  capacity_max: number;
   lantern_cost: number;
+  relight_cost: number;
   lantern_count_night1: number;
+  fuel_max: number;
+  fuel_decay_per_s: number;
+  fuel_per_mote: number;
+  drain_per_s: number;
+  low_fuel_threshold: number;
+  win_ratio: number;
   pickup_radius: number;
   interact_radius: number;
   pulse_cost: number;
@@ -80,6 +88,8 @@ export interface ScenarioLantern {
   pos?: Vec3;
   deposited?: number;
   lit?: boolean;
+  fuel?: number;
+  ever_lit?: boolean;
 }
 
 export interface ScenarioShade {
@@ -87,6 +97,7 @@ export interface ScenarioShade {
   pos: Vec3;
   state?: ShadeState;
   state_ticks_left?: number;
+  target_lantern_id?: string;
 }
 
 export interface ScenarioDrifter {
@@ -116,6 +127,7 @@ export interface ScenarioConfig {
     dash_cd_ticks?: number;
     pulse_cd_ticks?: number;
     charm_ticks?: number;
+    successful_lights?: number;
   };
   random_motes?: boolean;
   random_shades?: boolean;
@@ -134,6 +146,9 @@ export interface LanternEntity {
   pos: Vec3;
   lit: boolean;
   deposited: number;
+  fuelTicks: number; // Integer units of 1/60 fuel (max 6000 = 100 * 60)
+  everLit: boolean;
+  relitCount: number;
 }
 
 export interface ShadeEntity {
@@ -142,6 +157,8 @@ export interface ShadeEntity {
   state: ShadeState;
   stateTicksLeft: number;
   recoilDir: [number, number];
+  targetLanternId?: string;
+  drainTickCounter: number;
 }
 
 export interface DrifterEntity {
@@ -156,7 +173,7 @@ export interface MoteEntity {
   id: string;
   pos: Vec3;
   kind: MoteKind;
-  ttlTicks: number; // For dropped motes
+  ttlTicks: number;
 }
 
 export interface CharmEntity {
@@ -188,12 +205,16 @@ export interface SnapshotRecord {
     charm_s: number;
     flames: number;
     carried: number;
+    capacity: number;
   };
   lanterns: Array<{
     id: string;
     pos: Vec3;
     lit: boolean;
     deposited: number;
+    fuel: number;
+    ever_lit: boolean;
+    relit_count: number;
   }>;
   shades: Array<{
     id: string;
@@ -224,20 +245,23 @@ export interface EventRecord {
   type: 'event';
   tick: number;
   name:
-  | 'mote_picked'
-  | 'deposit'
-  | 'lantern_lit'
-  | 'pulse'
-  | 'player_hit'
-  | 'shade_spawned'
-  | 'dash'
-  | 'charm_picked'
-  | 'drifter_steal'
-  | 'drifter_drop'
-  | 'night_start'
-  | 'paused'
-  | 'resumed'
-  | 'game_over';
+    | 'mote_picked'
+    | 'deposit'
+    | 'lantern_lit'
+    | 'refuel'
+    | 'lantern_out'
+    | 'fuel_drain'
+    | 'pulse'
+    | 'player_hit'
+    | 'shade_spawned'
+    | 'dash'
+    | 'charm_picked'
+    | 'drifter_steal'
+    | 'drifter_drop'
+    | 'night_start'
+    | 'paused'
+    | 'resumed'
+    | 'game_over';
   data: Record<string, unknown>;
 }
 

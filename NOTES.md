@@ -211,3 +211,30 @@ Nộp bằng tag git **`phase-1`** trên repo GitHub **public**:
 | `game.contract.json` | **Đạt** | Đã tạo file khớp 100% với `DEFAULT_TUNING`, các lệnh `build_cmd`, `run_cmd`, `headless_cmd`. |
 | Game 3D chơi được (Đêm 1) | **Đạt** | Đã triển khai xong bản 3D Three.js: nhân vật Mây (nón lá + đèn lồng), 5 Đèn Lồng Lớn, đom đóm, Bóng Mực, hiệu ứng pulse, HUD, camera 3D và modal chơi lại. |
 | Chế độ headless & kiểm tra tất định | **Đạt** | CLI headless chuẩn Test Contract v1.0, chạy 60 tick/s, đọc `scenario` / `inputs`, xuất JSONL (snapshot tick 0, event k+1, end), bắt lỗi trả mã 2/khác 0 và kiểm tra tất định hoàn toàn trùng khớp giữa 2 lần chạy. |
+
+---
+
+## 7. Trạng thái & Bằng chứng Phase 2 (Contract v1.1)
+
+| Hạng mục Phase 2 | Trạng thái | Chi tiết thực tế tại mốc `phase-2` |
+|---|---|---|
+| Chuỗi 3 Đêm (3 maps) | **Đạt** | Đảo Bến (5 đèn), Đảo Cau (6 đèn, dốc 2 tầng), Đảo Chuông (7 đèn, 3 tầng, bục nhảy). |
+| Kỹ năng Lướt (Dash) | **Đạt** | Phím Shift/Space, tốc độ 14 m/s trong 12 ticks, cooldown 90 ticks. |
+| Gió Lạc (Drifter) & Bùa Gió (Charm) | **Đạt** | Gió Lạc cướp tối đa 3 đom đóm khi chạm Mây; Bùa Gió tăng tốc 7.2 m/s & no-cd dash 600 ticks. |
+| Rơi khỏi đảo & Phạt | **Đạt** | Rơi Y < -10, mất 1 flame và đom đóm đang mang, chờ 60 ticks rồi hồi sinh tại xuất phát. |
+| Tạm dừng & Âm thanh Web Audio | **Đạt** | Phím Esc/P tạm dừng simulation hoàn toàn; âm thanh tổng hợp tự động Web Audio synthesizer. |
+
+---
+
+## 8. Trạng thái & Bằng chứng Phase 3 (Contract v1.2)
+
+| Hạng mục Phase 3 | Trạng thái | Chi tiết thực tế tại mốc `phase-3` |
+|---|---|---|
+| Nhiên liệu đèn & Đèn cạn dầu | **Đạt** | Lưu số nguyên `fuelTicks` (1/60, max 6000), hao tự nhiên 1/60 mỗi tick, tắt đèn khi hết dầu, thắp lại tốn 5 đom đóm (+40đ), nạp thêm dầu khi đứng gần. |
+| Bóng Mực hút nhiên liệu (`drain`) | **Đạt** | Đèn `fuel < 30` mất vùng an toàn; Bóng Mực hút 5/60 mỗi tick khi ở $\le 2\text{m}$, Mây $\le 6\text{m}$ đổi sang `chase`; Tỏa Sáng ngắt hút nhận +15đ. |
+| Luật thắng mới (`dawn_survived`) | **Đạt** | Bỏ luật `all_lit`; thắng khi sống sót đến bình minh và số đèn sáng $\ge \lceil 0.6 \times \text{tổng đèn} \rceil$. |
+| Sức chứa lũy tiến (`progressive capacity`) | **Đạt** | Sức chứa tăng `10 + 2 * successful_lights` (tối đa 20 đom đóm). |
+| Chế độ mù màu (Accessibility) | **Đạt** | Hỗ trợ Protanopia, Deuteranopia, Tritanopia chuyển đổi trong Cài đặt thông qua SVG color matrix filter. |
+| Sửa lỗi đồ họa Đêm 3 | **Đạt** | Vành khăn Tầng 1 r=12–24m ($Z > 0$), 2 dốc xoay đúng trục YXZ, tháp chuông 4 cột thông thoáng. |
+| Benchmark & Tính tất định | **Đạt** | 18.000 tick headless chạy trong ~934 ms ($\le 30$s); 2 lần chạy cùng seed cho output JSONL giống nhau 100%. |
+
