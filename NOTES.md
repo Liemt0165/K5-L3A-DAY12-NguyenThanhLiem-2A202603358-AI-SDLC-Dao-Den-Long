@@ -238,3 +238,16 @@ Nộp bằng tag git **`phase-1`** trên repo GitHub **public**:
 | Sửa lỗi đồ họa Đêm 3 | **Đạt** | Vành khăn Tầng 1 r=12–24m ($Z > 0$), 2 dốc xoay đúng trục YXZ, tháp chuông 4 cột thông thoáng. |
 | Benchmark & Tính tất định | **Đạt** | 18.000 tick headless chạy trong ~934 ms ($\le 30$s); 2 lần chạy cùng seed cho output JSONL giống nhau 100%. |
 
+---
+
+## 9. Trạng thái & Bằng chứng Phase 4 (Contract v1.3 / v1.0.0)
+
+| Hạng mục Phase 4 | Trạng thái | Chi tiết thực tế tại mốc `phase-4` |
+|---|---|---|
+| Chế độ Benchmark 3D (`bench_cmd`) | **Đạt** | `bench.json`: `avg_fps = 145.2`, `p1_low_fps = 30.8`, `frame_ms_p95 = 9.3`, `load_ms = 237`, `peak_mem_mb = 310`, `vsync_off = true`. |
+| Soak Test 10 Đêm (`soak_cmd`) | **Đạt** | `soak.json`: `nights = 10`, `crashes = 0`, `mem_start_mb = 51.8`, `mem_end_mb = 58.7` (`1.13x <= 1.2x`). |
+| Bảng xếp hạng cục bộ | **Đạt** | Top 10 lưu cục bộ, nhập tên sau Bình Minh / Thua, màn hình Bảng xếp hạng, hỗ trợ `--export-leaderboard`. |
+| Dễ tiếp cận (Accessibility) | **Đạt** | Đổi 9 phím + báo trùng + mặc định, phụ đề & mũi tên Bóng Mực xuất hiện, Giảm chuyển động, cỡ chữ ≥ 18px + ×1.25. |
+| Đóng gói, Retro & Tài liệu | **Đạt** | `README.md`, `CHANGELOG.md` (4 phase), `CREDITS.md`, `LICENSE`, `docs/notes/retro.md`, `docs/proof/phase-4-proof.md`. |
+
+

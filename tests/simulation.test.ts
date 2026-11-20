@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { DEFAULT_TUNING } from '../src/core/contract.js';
 import { GameSimulation, defaultInputState } from '../src/core/simulation.js';
+import { sortAndTrimLeaderboard } from '../src/headless/leaderboardStore.js';
 import type { EndRecord, EventRecord, GameContract, SnapshotRecord } from '../src/core/types.js';
 
 const CLI_PATH = path.resolve('dist-headless/src/headless/cli.js');
@@ -47,10 +48,10 @@ function runHeadless(
   };
 }
 
-test('game.contract.json tuning matches DEFAULT_TUNING v1.2', () => {
+test('game.contract.json tuning matches DEFAULT_TUNING v1.3', () => {
   const raw = fs.readFileSync(path.resolve('game.contract.json'), 'utf8');
   const contract = JSON.parse(raw) as GameContract;
-  assert.equal(contract.contract_version, '1.2');
+  assert.equal(contract.contract_version, '1.3');
   assert.deepEqual(contract.tuning, DEFAULT_TUNING);
 });
 
@@ -267,5 +268,42 @@ test('headless CLI contract v1.2 determinism & 18,000 ticks <= 30s', () => {
   const sim = new GameSimulation(1, 1);
   assert.equal(sim.step(defaultInputState()).length >= 0, true);
 
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+});
+
+test('Phase 4 Contract v1.3: bench_cmd, soak_cmd, bench_mode (200 shades, 100 motes), leaderboard sort & export', () => {
+  const contract: GameContract = JSON.parse(fs.readFileSync('game.contract.json', 'utf8'));
+  assert.equal(contract.contract_version, '1.3');
+  assert.ok(contract.bench_cmd);
+  assert.ok(contract.soak_cmd);
+
+  const sim = new GameSimulation(42, 1, { bench_mode: true });
+  assert.equal(sim.shades.length, 200);
+  assert.equal(sim.motes.length, 100);
+  assert.equal(sim.lanterns.filter((l) => l.lit).length, 3);
+  assert.ok(sim.shades.every((s) => s.state === 'wander'));
+
+  for (let t = 0; t < 180; t++) {
+    sim.step(defaultInputState());
+  }
+  assert.equal(sim.state, 'playing');
+  assert.equal(sim.lanterns[0].fuelTicks, 6000);
+
+  const entries = sortAndTrimLeaderboard([
+    { name: 'Bob', score: 500, nights_won: 2, achieved_at: '2026-11-20T12:00:00+07:00', seed: 2 },
+    { name: 'Alice', score: 500, nights_won: 2, achieved_at: '2026-11-20T11:00:00+07:00', seed: 1 },
+    { name: 'Top', score: 900, nights_won: 3, achieved_at: '2026-11-20T13:00:00+07:00', seed: 3 }
+  ]);
+  assert.equal(entries[0].name, 'Top');
+  assert.equal(entries[1].name, 'Alice');
+  assert.equal(entries[2].name, 'Bob');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-p4-'));
+  const expPath = path.join(tmpDir, 'lb_out.json');
+  execFileSync(process.execPath, [path.resolve('dist-headless/src/headless/run.js'), '--export-leaderboard', expPath], {
+    encoding: 'utf8'
+  });
+  const exported = JSON.parse(fs.readFileSync(expPath, 'utf8'));
+  assert.ok(Array.isArray(exported.entries));
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });

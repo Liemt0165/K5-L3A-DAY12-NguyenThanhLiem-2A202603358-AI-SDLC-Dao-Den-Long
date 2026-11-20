@@ -5,3 +5,4 @@ dist-headless/
 .env.*
 *.log
 .DS_Store
+.dao-den-long-leaderboard.json

@@ -40,6 +40,7 @@ export class GameSimulation {
   readonly tuning: TuningConfig;
   readonly rng: SeededRng;
   readonly night: number;
+  readonly benchMode: boolean;
 
   simTick = 0;
   rawTick = 0;
@@ -107,6 +108,7 @@ export class GameSimulation {
   ) {
     this.tuning = tuning;
     this.night = night;
+    this.benchMode = scenario?.bench_mode ?? false;
     this.rng = new SeededRng(seed);
     this.playerFlames = tuning.flames;
 
@@ -115,10 +117,10 @@ export class GameSimulation {
     else this.initialTimeLeftS = tuning.night3_duration_s;
     this.timeLeftS = this.initialTimeLeftS;
 
-    this.randomMotes = scenario?.random_motes ?? true;
-    this.randomShades = scenario?.random_shades ?? true;
-    this.randomDrifters = scenario?.random_drifters ?? true;
-    this.windEnabled = scenario?.wind_enabled ?? (night === 3);
+    this.randomMotes = this.benchMode ? false : (scenario?.random_motes ?? true);
+    this.randomShades = this.benchMode ? false : (scenario?.random_shades ?? true);
+    this.randomDrifters = this.benchMode ? false : (scenario?.random_drifters ?? true);
+    this.windEnabled = this.benchMode ? false : (scenario?.wind_enabled ?? (night === 3));
 
     this.initMap(night);
     const initGroundY = this.getGroundY(this.playerPos[0], this.playerPos[2]);
@@ -127,6 +129,61 @@ export class GameSimulation {
       this.playerGrounded = true;
     }
     this.applyScenario(scenario);
+    if (this.benchMode) {
+      this.initBenchScene();
+    }
+  }
+
+  private initBenchScene(): void {
+    this.playerPos = [0, 0, 0];
+    this.playerVel = [0, 0, 0];
+    this.playerGrounded = true;
+    this.motes = [];
+    this.shades = [];
+    this.drifters = [];
+    this.nextMoteSeq = 1;
+    this.nextShadeSeq = 1;
+
+    // L1-L3 lit with fuel 100
+    for (const l of this.lanterns) {
+      if (l.id === 'L1' || l.id === 'L2' || l.id === 'L3') {
+        l.lit = true;
+        l.fuelTicks = FUEL_MAX_TICKS;
+        l.everLit = true;
+        l.deposited = this.tuning.lantern_cost;
+      } else {
+        l.lit = false;
+        l.fuelTicks = 0;
+        l.everLit = false;
+        l.deposited = 0;
+      }
+    }
+
+    // 200 Shades in wander state spread evenly on island (seed-deterministic)
+    for (let i = 0; i < 200; i++) {
+      const r = Math.sqrt(this.rng.next()) * 36.0;
+      const a = this.rng.next() * Math.PI * 2;
+      this.shades.push({
+        id: `S${this.nextShadeSeq++}`,
+        pos: [round3(Math.cos(a) * r), 1, round3(Math.sin(a) * r)],
+        state: 'wander',
+        stateTicksLeft: 0,
+        recoilDir: [0, 0],
+        drainTickCounter: 0
+      });
+    }
+
+    // 100 Motes spread evenly on island
+    for (let i = 0; i < 100; i++) {
+      const r = Math.sqrt(this.rng.next()) * 35.0;
+      const a = this.rng.next() * Math.PI * 2;
+      this.motes.push({
+        id: `M${this.nextMoteSeq++}`,
+        pos: [round3(Math.cos(a) * r), 0, round3(Math.sin(a) * r)],
+        kind: 'random',
+        ttlTicks: -1
+      });
+    }
   }
 
   getCapacity(): number {
@@ -445,7 +502,8 @@ export class GameSimulation {
     }
 
     // Fuel decay & shade drain (integer 1/60 units)
-    for (const l of this.lanterns) {
+    if (!this.benchMode) {
+      for (const l of this.lanterns) {
       if (!l.lit) continue;
       l.fuelTicks = Math.max(0, l.fuelTicks - 1); // 1.0 fuel/s
 
@@ -477,6 +535,7 @@ export class GameSimulation {
           s.drainTickCounter = 0;
         }
       }
+    }
     }
 
     // Step 3: Move May (jump, dash, jump pad, wind) & Island fall check
@@ -655,7 +714,7 @@ export class GameSimulation {
 
     // Step 4: Pick motes & charms
     const capacity = this.getCapacity();
-    if (!this.isRespawning && this.playerCarried < capacity) {
+    if (!this.benchMode && !this.isRespawning && this.playerCarried < capacity) {
       for (let i = 0; i < this.motes.length; ) {
         if (this.playerCarried >= capacity) break;
         const mote = this.motes[i];
@@ -975,7 +1034,7 @@ export class GameSimulation {
     }
 
     // Step 9: Collisions (Drifters steal first, then Shades hit)
-    if (!this.isRespawning) {
+    if (!this.benchMode && !this.isRespawning) {
       for (const d of this.drifters) {
         if (d.state === 'chase' && distXZ(this.playerPos, d.pos) <= 1.2) {
           const stealCount = Math.min(3, this.playerCarried);
@@ -1096,7 +1155,7 @@ export class GameSimulation {
     }
 
     // Step 11: Win/Loss at Dawn (no early win!)
-    if (this.timeLeftS <= 1e-9) {
+    if (!this.benchMode && this.timeLeftS <= 1e-9) {
       this.timeLeftS = 0;
       const litLanterns = this.lanterns.filter((l) => l.lit);
       const threshold = Math.ceil(this.tuning.win_ratio * this.lanterns.length);

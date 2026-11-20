@@ -55,6 +55,8 @@ export interface GameContract {
   build_cmd: string;
   run_cmd: string;
   headless_cmd: string;
+  bench_cmd: string;
+  soak_cmd: string;
   tuning: TuningConfig;
 }
 
@@ -133,6 +135,7 @@ export interface ScenarioConfig {
   random_shades?: boolean;
   random_drifters?: boolean;
   wind_enabled?: boolean;
+  bench_mode?: boolean;
   motes?: ScenarioMote[];
   shades?: ScenarioShade[];
   drifters?: ScenarioDrifter[];
